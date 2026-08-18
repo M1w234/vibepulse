@@ -10,6 +10,7 @@ __pycache__/
 # Byggträd är regenererbara.
 build/
 build-round-1.75c/
+build-square-verify/
 sim/build*/
 managed_components/
 sdkconfig

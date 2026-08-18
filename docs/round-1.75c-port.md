@@ -31,16 +31,29 @@ Compile the round firmware without flashing:
 ./tools/build-round-1.75c.sh
 ```
 
+## Compile verification
+
+On 2026-08-17, commit `91d16ac` was compiled from scratch in Espressif's
+official `espressif/idf:v5.5.2` container for both isolated targets:
+
+- `round-1.75c`: `torget.bin` size `0x1c3630`; 65% of the smallest app
+  partition remained free.
+- `square-2.16`: `torget.bin` size `0x1c49a0`; 65% of the smallest app
+  partition remained free.
+
+This verifies dependency selection and compilation only. It is not evidence of
+display, touch, power, Wi-Fi, or other behavior on the physical round board.
+
 ## Deliberately not claimed yet
 
 The 1.75C firmware target is compile-only. It must not be called flash-ready
 or installed on the ordered board until the hardware-arrival gate below.
 
-The official round-board reference currently uses:
+The round firmware target currently pins:
 
 - `waveshare/esp32_s3_touch_amoled_1_75c` version `^3.0.0`
 - LVGL `9.5.0`
-- ESP-IDF `5.5.5` or `6.0.2`
+- ESP-IDF `5.5.2` (the BSP manifest accepts ESP-IDF `>=5.5`)
 
 Selecting that dependency is only the first target step. The existing custom
 touch transform, QMI8658 orientation calibration, CO5300 MADCTL/gap table,
