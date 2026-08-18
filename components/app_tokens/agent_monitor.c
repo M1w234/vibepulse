@@ -650,8 +650,8 @@ static void create_needs_you(lv_obj_t *app_root) {
   lv_label_set_long_mode(v->q_prompt, LV_LABEL_LONG_DOT);
   v->q_card = bare(v->q_group);
 #if TORGET_DISPLAY_ROUND
-  lv_obj_set_pos(v->q_card, 34, 170);
-  lv_obj_set_size(v->q_card, 398, 72);
+  lv_obj_set_pos(v->q_card, 34, 160);
+  lv_obj_set_size(v->q_card, 398, 76);
 #else
   lv_obj_set_pos(v->q_card, 24, 140);
   lv_obj_set_size(v->q_card, 432, 92);
@@ -668,8 +668,13 @@ static void create_needs_you(lv_obj_t *app_root) {
 #endif
   lv_label_set_text(v->q_rec, "CLAUDE RECOMMENDS");
 #if TORGET_DISPLAY_ROUND
-  v->q_title = ny_text(v->q_card, &plex_body_27, COL_WHITE, 18, 28, 362, 0, L);
-  v->q_sub = ny_text(v->q_card, &plex_ui_16, COL_MUTED, 18, 55, 362, 0, L);
+  /* The square card has room for 27px/16px copy. On the round card that pair
+   * collided vertically and read as one broken line. Use the existing UI
+   * faces and separate title/subtitle into explicit, non-overlapping bands. */
+  v->q_title = ny_text(v->q_card, &plex_ui_21, COL_WHITE, 18, 29, 362, 0, L);
+  v->q_sub = ny_text(v->q_card, &plex_ui_14, COL_MUTED, 18, 54, 362, 0, L);
+  lv_label_set_long_mode(v->q_title, LV_LABEL_LONG_DOT);
+  lv_label_set_long_mode(v->q_sub, LV_LABEL_LONG_DOT);
   v->q_footer = ny_text(v->q_group, &plex_ui_14, COL_DIM, 80, 408, 306, 1, C);
 #else
   v->q_title = ny_text(v->q_card, &plex_body_27, COL_WHITE, 20, 34, 392, 0, L);
@@ -707,10 +712,20 @@ static void create_needs_you(lv_obj_t *app_root) {
   /* -- Shared buttons: APPROVE always filled, DENY the one restrained red -- */
   v->approve = ny_button(v->root, "APPROVE", &plex_attention_25, COL_BLACK,
                          COL_CLAUDE, true, TK_NEEDS_YOU_VERDICT_APPROVE);
+#if TORGET_DISPLAY_ROUND
+  /* The round approval state puts both secondary actions into the 206px
+   * bottom chord. The 25px face clips LEAVE IT inside its 97px target; the
+   * existing 18px attention face preserves the label and visual hierarchy. */
+  v->deny = ny_button(v->root, "DENY", &plex_attention_18, COL_RED, COL_RED,
+                      false, TK_NEEDS_YOU_VERDICT_DENY);
+  v->leave = ny_button(v->root, "LEAVE IT", &plex_attention_18, COL_MUTED,
+                       COL_DIM, false, TK_NEEDS_YOU_VERDICT_LEAVE_IT);
+#else
   v->deny = ny_button(v->root, "DENY", &plex_attention_25, COL_RED, COL_RED,
                       false, TK_NEEDS_YOU_VERDICT_DENY);
   v->leave = ny_button(v->root, "LEAVE IT", &plex_attention_25, COL_MUTED,
                        COL_DIM, false, TK_NEEDS_YOU_VERDICT_LEAVE_IT);
+#endif
 
   /* -- PRIVATE: no buttons; the mascot holds the secret at 60% ------------- */
   v->pv_group = ny_group(v->root);
@@ -733,11 +748,16 @@ static void create_needs_you(lv_obj_t *app_root) {
   v->pv_sub = ny_text(v->pv_group, &plex_ui_16, COL_MUTED, 0, 324, VP_SCREEN_W, 0, C);
   lv_label_set_text(v->pv_sub, "Details stay on the Mac");
 #if TORGET_DISPLAY_ROUND
-  v->pv_tap = ny_text(v->pv_group, &plex_ui_16, COL_DIM, 0, 410, VP_SCREEN_W, 2, C);
+  v->pv_tap = ny_text(v->pv_group, &plex_ui_14, COL_DIM,
+                      90, 392, 286, 2, C);
 #else
   v->pv_tap = ny_text(v->pv_group, &plex_ui_16, COL_DIM, 0, 420, VP_SCREEN_W, 2, C);
 #endif
+#if TORGET_DISPLAY_ROUND
+  lv_label_set_text(v->pv_tap, "TAP TO ANSWER ON MAC");
+#else
   lv_label_set_text(v->pv_tap, "TAP TO ANSWER AT YOUR DESK");
+#endif
 
   /* -- PAYOFF: a static beat, no motion until the motion gate -------------- */
   v->po_group = ny_group(v->root);
@@ -964,7 +984,7 @@ static void render_needs_you(void) {
   if (offer_approve) {
 #if TORGET_DISPLAY_ROUND
     lv_obj_set_pos(v->approve, 44, approve_y);
-    lv_obj_set_size(v->approve, 378, 80);
+    lv_obj_set_size(v->approve, 378, 90);
 #else
     lv_obj_set_pos(v->approve, 24, approve_y);
     lv_obj_set_size(v->approve, 432, 96);
@@ -973,12 +993,15 @@ static void render_needs_you(void) {
   }
   if (offer_deny) {
 #if TORGET_DISPLAY_ROUND
-    int row_y = approve_y + 88;
-    lv_obj_set_pos(v->deny, 44, row_y);
-    lv_obj_set_size(v->deny, 181, 68);
+    /* At the bottom of a circle the available chord contracts sharply.
+     * Two compact 97x90 targets fit the y=350..440 chord while preserving
+     * the approved 90px touch-height contract. */
+    int row_y = approve_y + 98;
+    lv_obj_set_pos(v->deny, 130, row_y);
+    lv_obj_set_size(v->deny, 97, 90);
     ny_show(v->deny, true);
-    lv_obj_set_pos(v->leave, 241, row_y);
-    lv_obj_set_size(v->leave, 181, 68);
+    lv_obj_set_pos(v->leave, 239, row_y);
+    lv_obj_set_size(v->leave, 97, 90);
 #else
     int row_y = approve_y + 108;
     lv_obj_set_pos(v->deny, 24, row_y);
@@ -989,14 +1012,22 @@ static void render_needs_you(void) {
 #endif
   } else {
 #if TORGET_DISPLAY_ROUND
-    lv_obj_set_pos(v->leave, 44, offer_approve ? approve_y + 88 : approve_y);
-    lv_obj_set_size(v->leave, 378, 68);
+    lv_obj_set_pos(v->leave, 126,
+                   offer_approve ? approve_y + 98 : approve_y);
+    lv_obj_set_size(v->leave, 214, 90);
 #else
     lv_obj_set_pos(v->leave, 24, offer_approve ? approve_y + 106 : approve_y);
     lv_obj_set_size(v->leave, 432, 90);
 #endif
   }
   ny_show(v->leave, true);
+
+#if TORGET_DISPLAY_ROUND
+  /* The terminal footer occupied the same contracted bottom chord as the
+   * secondary action. The action communicates the handoff; duplicating it
+   * below the control made the screen noisier and physically overlapped. */
+  ny_show(v->q_footer, false);
+#endif
 
   ny_show(v->root, true);
   lv_obj_move_foreground(v->root);

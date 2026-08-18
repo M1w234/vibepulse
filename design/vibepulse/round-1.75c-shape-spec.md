@@ -26,9 +26,16 @@ The round adaptation is a reflow, not a scale-down. The display center holds the
 - Primary safe content band: `x=36..430`, `y=52..414`.
 - Upper identity/control content must fit inside `x=92..374` by `y=48`.
 - Hero metrics should remain centered within `y=116..278`.
+- Large metric ink must be optically centered and retain at least 12 px of
+  radial clearance; a rectangular label box fitting is not sufficient proof.
 - Supporting labels, progress, and reset information should remain within `y=286..402`.
 - Pager/control affordances should remain centered and compact at `y=420..448`.
 - Minimum touch target remains 44×44 logical pixels; edge targets must not cross the visible circular boundary.
+- `Needs You` keeps its stricter approved 90 px touch height. Primary actions
+  occupy the broad middle chord; secondary actions narrow or split inside the
+  lower chord rather than stretching into clipped edges.
+- Round decision cards use separate eyebrow, title, and subtitle bands. Footer
+  copy is omitted when it competes with the lower action chord.
 
 ## State and disclosure
 
@@ -48,5 +55,7 @@ The round adaptation is a reflow, not a scale-down. The display center holds the
 - Square simulator behavior and captures remain unchanged under the default profile.
 - A selectable round simulator profile renders at exactly 466×466 with black/absent corners.
 - Static captures cover live, partial, stale, no-data, error, launcher, GitHub, value, tracker, and `Needs You` states.
-- Automated tests prove profile dimensions and circular clipping; exact raster inspection confirms no meaningful content is cut by the panel edge.
+- Automated raster tests prove profile dimensions, circular clipping, hero
+  radial clearance, separated decision-copy bands, readable action labels,
+  90 px action heights, and safe lower-chord placement.
 - Hardware, touch mapping, buttons, brightness, sleep/wake, and power behavior remain labeled unverified until tested on the delivered board.

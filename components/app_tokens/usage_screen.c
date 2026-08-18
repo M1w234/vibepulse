@@ -559,6 +559,13 @@ static void create_quota_page(quota_page *page, int index,
   page->percent = label(page->tile, &plex_num_164, COL_WHITE,
                         QUOTA_HERO_X, VP_PERCENT_Y, QUOTA_HERO_W, 190);
   lv_obj_set_style_text_letter_space(page->percent, -9, 0);
+#if TORGET_DISPLAY_ROUND
+  /* A left-anchored 164px hero can intersect the circle where its top chord
+   * is narrow (the 7 in 73% was visibly clipped). Centre the rendered value
+   * in the full hero band so every two/three-digit fixture keeps real glass
+   * between its ink and the panel edge. */
+  lv_obj_set_style_text_align(page->percent, LV_TEXT_ALIGN_CENTER, 0);
+#endif
   lv_label_set_text(page->percent, "–");
 
   page->track = bare(page->tile);

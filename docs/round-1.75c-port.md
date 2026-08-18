@@ -7,6 +7,8 @@ Target board: Waveshare ESP32-S3-Touch-AMOLED-1.75C, 466×466 circular AMOLED.
 - `TORGET_SIM_PROFILE=round-1.75c` creates a true 466×466 simulator window.
 - Platform roots and overlays clip to the circular panel.
 - VibePulse quota, burn-rate, tracker, GitHub, value, completion, `Needs You`, boot, launcher, and OTA surfaces have round-specific geometry.
+- Round-specific raster contracts guard large percentage edge clearance and
+  every `Needs You` decision state against copy overlap and curved-edge loss.
 - The default `square` simulator remains byte-for-byte identical to the upstream 480×480 capture set.
 
 Build and capture the round profile:
