@@ -355,6 +355,19 @@ cmake -S sim -B sim/build -G Ninja && ninja -C sim/build
 
 (On Debian/Ubuntu: `apt-get install libsdl2-dev cmake ninja-build` instead.)
 
+The in-progress 466×466 circular-board port has its own opt-in profile:
+
+```sh
+cmake -S sim -B sim/build-round -G Ninja -DTORGET_SIM_PROFILE=round-1.75c
+ninja -C sim/build-round
+./sim/build-round/torget-sim
+```
+
+It clips the same interface to the physical circle and reflows the dense
+states instead of shrinking the square UI. Target-firmware and hardware
+verification status is tracked separately in
+[docs/round-1.75c-port.md](docs/round-1.75c-port.md).
+
 Same code, same fonts, same pixels as the device — it builds the real
 platform and VibePulse against the real LVGL, and feeds it the recorded
 fixtures in `sim-fixtures/` through the same parsers the board runs. Every

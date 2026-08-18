@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "lvgl.h"
+#include "torget_display.h"
 
 #include "app_tokens.h"
 #include "agent_monitor.h"
@@ -602,6 +603,10 @@ static void capture_needs_you_v2(void) {
 
 static int run_vibepulse_static_qa(void) {
   capture_failures = 0;
+#if TORGET_DISPLAY_ROUND
+  torget_launcher_open();
+  dump_frame("launcher-round");
+#endif
   torget_app_show(SIM_APP_VIBEPULSE);
 
   feed_tokens();
@@ -1033,8 +1038,13 @@ int main(int argc, char **argv) {
   /* Radbuffrat även vid pipe: fixtureloggen ska överleva en kill. */
   setvbuf(stdout, NULL, _IOLBF, 0);
   lv_init();
-  lv_display_t *disp = lv_sdl_window_create(480, 480);
+  lv_display_t *disp = lv_sdl_window_create(TORGET_DISPLAY_WIDTH,
+                                             TORGET_DISPLAY_HEIGHT);
+#if TORGET_DISPLAY_ROUND
+  lv_sdl_window_set_title(disp, "VibePulse Round 466x466 — G GitHub-star, S agentstatus, T VibePulse, M Max Tracker, [ och ] vy, N nästa app, L launcher");
+#else
   lv_sdl_window_set_title(disp, "Torget 480x480 — G GitHub-star, S agentstatus, T VibePulse, M Max Tracker, [ och ] vy, N nästa app, L launcher");
+#endif
   lv_sdl_mouse_create();
 
   torget_ui_create(); /* bygger apparna via registret, går in i app 0 */

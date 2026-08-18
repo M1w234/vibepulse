@@ -6,6 +6,10 @@ project(torget-sim C)
 
 set(CMAKE_C_STANDARD 11)
 
+set(TORGET_SIM_PROFILE "square" CACHE STRING
+    "Display profile: square or round-1.75c")
+set_property(CACHE TORGET_SIM_PROFILE PROPERTY STRINGS square round-1.75c)
+
 include(FetchContent)
 # P20: samma minor som targetets BSP löser till (dependencies.lock) — en
 # pixel som stämmer på Macen ska stämma på panelen. Vid BSP-bump: uppdatera här.
@@ -98,6 +102,16 @@ target_compile_definitions(torget-sim PRIVATE
   TK_GITHUB_SCREEN_ENABLED=1
   TK_GITHUB_NOTIFICATIONS_ENABLED=1
   TK_GITHUB_SOUND_ENABLED=1)
+
+if(TORGET_SIM_PROFILE STREQUAL "round-1.75c")
+  target_compile_definitions(torget-sim PRIVATE
+    TORGET_DISPLAY_WIDTH=466
+    TORGET_DISPLAY_HEIGHT=466
+    TORGET_DISPLAY_ROUND=1)
+elseif(NOT TORGET_SIM_PROFILE STREQUAL "square")
+  message(FATAL_ERROR
+    "Unknown TORGET_SIM_PROFILE='${TORGET_SIM_PROFILE}' (use square or round-1.75c)")
+endif()
 
 target_include_directories(torget-sim PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}"

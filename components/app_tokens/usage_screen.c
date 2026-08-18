@@ -17,7 +17,7 @@
 #include "torget.h"
 #include "usage_live_policy.h"
 #include "usage_presenter.h"
-#include "vibepulse_layout.generated.h"
+#include "vibepulse_layout.h"
 
 extern const lv_font_t plex_num_164;
 extern const lv_font_t plex_num_118;
@@ -53,20 +53,43 @@ extern const lv_font_t plex_text_17;
 _Static_assert(VP_PERCENT_FONT_PX == 164,
                "plex_num_164 must match the Studio percent token");
 
+#if TORGET_DISPLAY_ROUND
+#define HEADER_LINE_Y 84
+#define PAGER_Y 434
+#define STAT_VALUE_Y VP_RESET_Y
+#define STAT_LABEL_Y 389
+#define LEFT_STAT_X 82
+#define LEFT_STAT_W 130
+#define RIGHT_STAT_X 254
+#define RIGHT_STAT_W 130
+#define QUOTA_HERO_X 9
+#define QUOTA_HERO_W 448
+#else
 #define HEADER_LINE_Y 63
 #define PAGER_Y 456
 #define STAT_VALUE_Y VP_RESET_Y
 #define STAT_LABEL_Y 396
+#define LEFT_STAT_X VP_SAFE_X
+#define LEFT_STAT_W 210
 #define RIGHT_STAT_X 240
 #define RIGHT_STAT_W 218
+#define QUOTA_HERO_X 16
+#define QUOTA_HERO_W 448
+#endif
 
 /* Max Tracker geometry — approved 2026-08-12 mocks, matches the studio
  * design tokens: content safe X 22/width 436, grid indented a further
  * 9-10 px each side so the heatmap reads as its own object. */
 #define MT_EYEBROW_Y (VP_QUOTA_Y + 4)
+#if TORGET_DISPLAY_ROUND
+#define MT_GRID_X 44
+#define MT_GRID_Y 126
+#define MT_CELL 16
+#else
 #define MT_GRID_X 31
 #define MT_GRID_Y 112
 #define MT_CELL 18
+#endif
 #define MT_GAP 3
 #define MT_PITCH (MT_CELL + MT_GAP)
 #define MT_ROWS 7
@@ -232,21 +255,35 @@ static void create_claude_icon(lv_obj_t *parent, int x, int y) {
 
 static void create_hairline(lv_obj_t *parent, int y) {
   lv_obj_t *line = bare(parent);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(line, 60, y);
+  lv_obj_set_size(line, 346, 1);
+#else
   lv_obj_set_pos(line, VP_SAFE_X, y);
   lv_obj_set_size(line, VP_CONTENT_W, 1);
+#endif
   lv_obj_set_style_bg_opa(line, LV_OPA_COVER, 0);
   lv_obj_set_style_bg_color(line, COL_HAIRLINE, 0);
 }
 
 static void create_provider_identity(lv_obj_t *tile,
                                      usage_provider provider) {
+#if TORGET_DISPLAY_ROUND
+  const int icon_x = 92;
+  const int name_x = 134;
+  const int name_w = 112;
+#else
+  const int icon_x = VP_SAFE_X;
+  const int name_x = 64;
+  const int name_w = 180;
+#endif
   if (provider == USAGE_PROVIDER_CLAUDE)
-    create_claude_icon(tile, VP_SAFE_X, VP_PROVIDER_Y - 2);
+    create_claude_icon(tile, icon_x, VP_PROVIDER_Y - 2);
   else
-    create_codex_icon(tile, VP_SAFE_X, VP_PROVIDER_Y - 2);
+    create_codex_icon(tile, icon_x, VP_PROVIDER_Y - 2);
 
   lv_obj_t *provider_name = label(tile, &plex_ui_21, COL_WHITE,
-                                  64, VP_PROVIDER_Y + 1, 180, 30);
+                                  name_x, VP_PROVIDER_Y + 1, name_w, 30);
   lv_obj_set_style_text_letter_space(provider_name, 2, 0);
   lv_label_set_text(provider_name,
                     provider == USAGE_PROVIDER_CLAUDE ? "CLAUDE" : "CODEX");
@@ -260,7 +297,11 @@ static void create_live_header_widgets(lv_obj_t *tile, usage_provider provider,
                                        lv_obj_t **halo_out,
                                        lv_obj_t **context_out) {
   lv_obj_t *halo = bare(tile);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(halo, 88, 40);
+#else
   lv_obj_set_pos(halo, 18, 14);
+#endif
   lv_obj_set_size(halo, 40, 40);
   lv_obj_set_style_radius(halo, LV_RADIUS_CIRCLE, 0);
   lv_obj_set_style_border_width(halo, 2, 0);
@@ -270,8 +311,13 @@ static void create_live_header_widgets(lv_obj_t *tile, usage_provider provider,
   lv_obj_add_flag(halo, LV_OBJ_FLAG_HIDDEN);
 
   create_provider_identity(tile, provider);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_t *context = label(tile, &plex_ui_12, COL_META,
+                            226, VP_PROVIDER_Y + 7, 160, 18);
+#else
   lv_obj_t *context = label(tile, &plex_ui_14, COL_META,
                             180, VP_PROVIDER_Y + 5, 278, 20);
+#endif
   lv_obj_set_style_text_align(context, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_set_style_text_letter_space(context, 1, 0);
   create_hairline(tile, HEADER_LINE_Y);
@@ -289,6 +335,23 @@ static void create_quota_header(quota_page *page) {
 static void create_analytics_header(lv_obj_t *tile, const char *title,
                                     const char *top_right,
                                     const char *bottom_right) {
+#if TORGET_DISPLAY_ROUND
+  lv_obj_t *heading = label(tile, &plex_ui_21, COL_WHITE,
+                            80, 42, 306, 30);
+  lv_obj_set_style_text_align(heading, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_letter_space(heading, 2, 0);
+  lv_label_set_text(heading, title);
+  lv_obj_t *top = label(tile, &plex_ui_14, COL_META, 80, 70, 306, 18);
+  lv_obj_set_style_text_align(top, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_letter_space(top, 1, 0);
+  lv_label_set_text(top, top_right);
+  lv_obj_t *bottom = label(tile, &plex_ui_12, COL_MUTED,
+                           80, 89, 306, 16);
+  lv_obj_set_style_text_align(bottom, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_letter_space(bottom, 2, 0);
+  lv_label_set_text(bottom, bottom_right);
+  create_hairline(tile, 108);
+#else
   lv_obj_t *heading = label(tile, &plex_ui_21, COL_WHITE,
                             VP_SAFE_X, 23, 240, 30);
   lv_obj_set_style_text_letter_space(heading, 2, 0);
@@ -303,6 +366,7 @@ static void create_analytics_header(lv_obj_t *tile, const char *title,
   lv_obj_set_style_text_letter_space(bottom, 2, 0);
   lv_label_set_text(bottom, bottom_right);
   create_hairline(tile, HEADER_LINE_Y);
+#endif
 }
 
 /* Centred from the dot geometry rather than a hard-coded origin: the row
@@ -365,6 +429,26 @@ static void create_github_page(void) {
   memset(page, 0, sizeof *page);
   page->tile = new_tile(VIEW_GITHUB);
 
+#if TORGET_DISPLAY_ROUND
+  lv_obj_t *heading = label(page->tile, &plex_ui_21, COL_WHITE,
+                            80, 42, 306, 30);
+  lv_obj_set_style_text_align(heading, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_letter_space(heading, 2, 0);
+  lv_label_set_text(heading, "GITHUB");
+  page->project = label(page->tile, &plex_ui_14, COL_META,
+                        80, 70, 306, 18);
+  lv_obj_set_style_text_align(page->project, LV_TEXT_ALIGN_CENTER, 0);
+  page->provenance = label(page->tile, &plex_ui_12, COL_MUTED,
+                           80, 89, 306, 16);
+  lv_obj_set_style_text_align(page->provenance, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_letter_space(page->provenance, 2, 0);
+  create_hairline(page->tile, 108);
+  const int stars_label_y = 122;
+  const int stars_y = 150;
+  const int divider_y = 344;
+  const int forks_label_y = 365;
+  const int forks_y = 394;
+#else
   lv_obj_t *heading = label(page->tile, &plex_ui_21, COL_WHITE,
                             VP_SAFE_X, 23, 170, 30);
   lv_obj_set_style_text_letter_space(heading, 2, 0);
@@ -377,27 +461,33 @@ static void create_github_page(void) {
   lv_obj_set_style_text_align(page->provenance, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_set_style_text_letter_space(page->provenance, 2, 0);
   create_hairline(page->tile, HEADER_LINE_Y);
+  const int stars_label_y = 88;
+  const int stars_y = 128;
+  const int divider_y = 354;
+  const int forks_label_y = 378;
+  const int forks_y = 407;
+#endif
 
   lv_obj_t *stars_label = label(page->tile, &plex_ui_21, COL_STAR,
-                                VP_SAFE_X, 88, VP_CONTENT_W, 30);
+                                VP_SAFE_X, stars_label_y, VP_CONTENT_W, 30);
   lv_obj_set_style_text_align(stars_label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(stars_label, 3, 0);
   lv_label_set_text(stars_label, "STARS");
 
   page->stars = label(page->tile, &plex_num_164, COL_WHITE,
-                      16, 128, 448, 190);
+                      QUOTA_HERO_X, stars_y, QUOTA_HERO_W, 190);
   lv_obj_set_style_text_align(page->stars, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(page->stars, -7, 0);
   lv_label_set_text(page->stars, "–");
 
-  create_hairline(page->tile, 354);
+  create_hairline(page->tile, divider_y);
   lv_obj_t *forks_label = label(page->tile, &plex_ui_14, COL_MUTED,
-                                VP_SAFE_X, 378, VP_CONTENT_W, 20);
+                                VP_SAFE_X, forks_label_y, VP_CONTENT_W, 20);
   lv_obj_set_style_text_align(forks_label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(forks_label, 2, 0);
   lv_label_set_text(forks_label, "FORKS");
   page->forks = label(page->tile, &plex_stat_35, COL_WHITE,
-                      VP_SAFE_X, 407, VP_CONTENT_W, 43);
+                      VP_SAFE_X, forks_y, VP_CONTENT_W, 43);
   lv_obj_set_style_text_align(page->forks, LV_TEXT_ALIGN_CENTER, 0);
   lv_label_set_text(page->forks, "–");
   create_pager(page->tile, VIEW_GITHUB);
@@ -467,7 +557,7 @@ static void create_quota_page(quota_page *page, int index,
   lv_obj_set_style_text_letter_space(page->quota, 2, 0);
 
   page->percent = label(page->tile, &plex_num_164, COL_WHITE,
-                        16, VP_PERCENT_Y, 448, 190);
+                        QUOTA_HERO_X, VP_PERCENT_Y, QUOTA_HERO_W, 190);
   lv_obj_set_style_text_letter_space(page->percent, -9, 0);
   lv_label_set_text(page->percent, "–");
 
@@ -503,7 +593,7 @@ static void create_quota_page(quota_page *page, int index,
   lv_obj_set_style_bg_color(page->marker, COL_WHITE, 0);
   lv_obj_add_flag(page->marker, LV_OBJ_FLAG_HIDDEN);
 
-  create_stat(page->tile, &page->today, VP_SAFE_X, 210, false,
+  create_stat(page->tile, &page->today, LEFT_STAT_X, LEFT_STAT_W, false,
               provider == USAGE_PROVIDER_CLAUDE ? COL_CLAUDE : COL_CODEX,
               "USED TODAY");
   create_stat(page->tile, &page->reset, RIGHT_STAT_X, RIGHT_STAT_W, true,
@@ -534,11 +624,19 @@ static void create_forecast_row(lv_obj_t *tile, forecast_row *row,
 static void create_burn_rate_page(void) {
   lv_obj_t *tile = new_tile(VIEW_BURN_RATE);
   create_analytics_header(tile, "BURN RATE", "WEEKLY", "FORECAST");
+#if TORGET_DISPLAY_ROUND
+  create_forecast_row(tile, &ui.forecast_rows[0], 122,
+                      USAGE_PROVIDER_CLAUDE);
+  create_hairline(tile, 258);
+  create_forecast_row(tile, &ui.forecast_rows[1], 274,
+                      USAGE_PROVIDER_CODEX);
+#else
   create_forecast_row(tile, &ui.forecast_rows[0], 82,
                       USAGE_PROVIDER_CLAUDE);
   create_hairline(tile, 251);
   create_forecast_row(tile, &ui.forecast_rows[1], 270,
                       USAGE_PROVIDER_CODEX);
+#endif
   create_pager(tile, VIEW_BURN_RATE);
 }
 
@@ -554,17 +652,27 @@ static void create_burn_rate_page(void) {
  * than as a page from somewhere else. Only the hero font differs, and only
  * because the 164 px numerals carry no "$" or "x" and adding either would
  * shift all four approved quota rasters. */
+#if TORGET_DISPLAY_ROUND
+#define VALUE_HERO_X 18
+#define VALUE_HERO_Y 153
+#define VALUE_MONEY_HERO_Y 159
+#define VALUE_WORD_HERO_Y 157
+#define VALUE_VERDICT_Y 116
+#define VALUE_ATTRIB_Y 276
+#define VALUE_STAT_Y 343
+#else
 #define VALUE_HERO_X 18
 #define VALUE_HERO_Y 143   /* ink top lands on 151, the quota hero's own */
 #define VALUE_MONEY_HERO_Y 151
 #define VALUE_WORD_HERO_Y 150
 #define VALUE_VERDICT_Y 72
 #define VALUE_ATTRIB_Y 272
+#define VALUE_STAT_Y 349
+#endif
 /* Break-even is half scale, and half the content width is the screen centre. */
 #define VALUE_MARKER_X (VP_SAFE_X + VP_CONTENT_W / 2 - 1)
 /* plex_money_35's line_height is 3 px taller than the quota stat font's, so
  * y=349 puts its digit ink on the family's 352 row. Do not "fix" to 352. */
-#define VALUE_STAT_Y 349
 
 static void create_value_page(void) {
   value_page *page = &ui.value;
@@ -611,17 +719,24 @@ static void create_value_page(void) {
   lv_obj_set_style_bg_color(page->marker, COL_WHITE, 0);
 
   page->stat_api = label(page->tile, &plex_money_35, COL_WHITE,
-                         VP_SAFE_X, VALUE_STAT_Y, 210, 38);
+                         LEFT_STAT_X, VALUE_STAT_Y, LEFT_STAT_W, 38);
   page->stat_paid = label(page->tile, &plex_money_35, COL_WHITE,
-                          240, VALUE_STAT_Y, 218, 38);
+                          RIGHT_STAT_X, VALUE_STAT_Y, RIGHT_STAT_W, 38);
   lv_obj_set_style_text_align(page->stat_paid, LV_TEXT_ALIGN_RIGHT, 0);
 
   page->cap_api = label(page->tile, &plex_ui_14, COL_MUTED,
-                        VP_SAFE_X, STAT_LABEL_Y, 140, 20);
+                        LEFT_STAT_X, STAT_LABEL_Y, LEFT_STAT_W, 20);
+#if TORGET_DISPLAY_ROUND
+  page->cap_break = label(page->tile, &plex_ui_14, COL_MUTED,
+                          163, STAT_LABEL_Y, 140, 20);
+  page->cap_paid = label(page->tile, &plex_ui_14, COL_MUTED,
+                         RIGHT_STAT_X, STAT_LABEL_Y, RIGHT_STAT_W, 20);
+#else
   page->cap_break = label(page->tile, &plex_ui_14, COL_MUTED,
                           170, STAT_LABEL_Y, 140, 20);
   page->cap_paid = label(page->tile, &plex_ui_14, COL_MUTED,
                          318, STAT_LABEL_Y, 140, 20);
+#endif
   lv_obj_set_style_text_align(page->cap_break, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_align(page->cap_paid, LV_TEXT_ALIGN_RIGHT, 0);
   for (lv_obj_t **c = (lv_obj_t *[]){page->cap_api, page->cap_break,
@@ -910,8 +1025,13 @@ static void create_tracker_page(tracker_page *page, int index, bool codex) {
   /* plan_label kan innehålla siffror ("MAX 20X"); plex_text_16 saknar
    * 0-9 (bara A-Z/mellanslag/ÅÄÖ). plex_ui_16 är SAMMA typsnitt/storlek
    * (IBM Plex Sans SemiBold 16 px) med bredare glyftäckning. */
+#if TORGET_DISPLAY_ROUND
+  page->plan_badge = label(page->tile, &plex_ui_16, COL_MUTED,
+                           260, MT_EYEBROW_Y, 140, 20);
+#else
   page->plan_badge = label(page->tile, &plex_ui_16, COL_MUTED,
                            298, MT_EYEBROW_Y, 160, 20);
+#endif
   lv_obj_set_style_text_align(page->plan_badge, LV_TEXT_ALIGN_RIGHT, 0);
   lv_label_set_text(page->plan_badge, "");
 
@@ -929,15 +1049,25 @@ static void create_tracker_page(tracker_page *page, int index, bool codex) {
 
   create_hairline(page->tile, MT_STAT_LINE_Y);
 
+#if TORGET_DISPLAY_ROUND
+  static const char *const captions[4] = {
+    "STREAK", "MAX WKS", "AVG PEAK", "MAX DAYS",
+  };
+#else
   static const char *const captions[4] = {
     "STREAK", "MAX WEEKS", "AVG PEAK", "MAX DAYS",
   };
+#endif
   for (int i = 0; i < 4; i++) {
     int x = MT_GRID_X + (i * MT_GRID_W) / 4;
     /* -8 px gutter (samma marginal som RIGHT_STAT_X/RIGHT_STAT_W lämnar
      * mellan kvotsidornas kolumner) så "MAX WEEKS" aldrig rör vid
      * "AVG PEAK" — fyra jämnbreda kolumner, inte fyra sammanhängande. */
+#if TORGET_DISPLAY_ROUND
+    lv_obj_t *caption = label(page->tile, &plex_ui_14, COL_MUTED,
+#else
     lv_obj_t *caption = label(page->tile, &plex_text_16, COL_MUTED,
+#endif
                               x, MT_STAT_LABEL_Y, MT_STAT_COL_W - 6, 16);
     lv_label_set_text(caption, captions[i]);
 

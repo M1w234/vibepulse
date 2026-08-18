@@ -7,6 +7,7 @@
 #include "lvgl.h"
 
 #include "torget.h"
+#include "torget_display.h"
 
 /*
  * Ringen (riktning A, vald 2026-08-14): ett fullsvart lager med lägesordet
@@ -44,8 +45,13 @@ extern const lv_font_t plex_ui_21;
  * som mockupen (2026-08-14, riktning A). Centrum (240, 268) lämnar plats
  * för lägesordet överst utan att sista raden når det klippta hörnglaset. */
 #define ARC_SIZE   296
-#define ARC_X      (240 - ARC_SIZE / 2)
-#define ARC_Y      (268 - ARC_SIZE / 2)
+#if TORGET_DISPLAY_ROUND
+#define ARC_CENTER_Y 254
+#else
+#define ARC_CENTER_Y 268
+#endif
+#define ARC_X      (TORGET_DISPLAY_CENTER_X - ARC_SIZE / 2)
+#define ARC_Y      (ARC_CENTER_Y - ARC_SIZE / 2)
 #define ARC_WIDTH  16
 
 /* Fönstret är tio minuter; bågen mappar sekunder → 0..100 mot det taket. */
@@ -98,8 +104,9 @@ void torget_ota_ui_create(void) {
    * under anroparens UI-lås (samma mönster som torget_ui_create). */
   ui.overlay = lv_obj_create(lv_layer_top());
   lv_obj_remove_style_all(ui.overlay);
-  lv_obj_set_size(ui.overlay, 480, 480);
+  lv_obj_set_size(ui.overlay, TORGET_DISPLAY_WIDTH, TORGET_DISPLAY_HEIGHT);
   lv_obj_set_pos(ui.overlay, 0, 0);
+  torget_display_clip(ui.overlay);
   lv_obj_set_style_bg_color(ui.overlay, lv_color_black(), 0);
   lv_obj_set_style_bg_opa(ui.overlay, LV_OPA_COVER, 0);
   /* Overlayn SLUKAR touch: annars når fingret apparna bakom svart glas. */
@@ -153,7 +160,7 @@ void torget_ota_ui_create(void) {
   lv_obj_set_style_text_font(ui.version, &plex_ui_21, 0);
   lv_obj_set_style_text_color(ui.version, COL_DETAIL, 0);
   lv_obj_set_style_text_letter_space(ui.version, 2, 0);
-  lv_obj_align(ui.version, LV_ALIGN_TOP_MID, 0, 268 + ARC_SIZE / 2 + 10);
+  lv_obj_align(ui.version, LV_ALIGN_TOP_MID, 0, ARC_CENTER_Y + ARC_SIZE / 2 + 10);
   lv_label_set_text(ui.version, "");
 
   /* NOTICE-pillren: LATER dampat, UPDATE vitt. Bada ar generosa
@@ -162,7 +169,7 @@ void torget_ota_ui_create(void) {
   ui.later = lv_obj_create(ui.overlay);
   lv_obj_remove_style_all(ui.later);
   lv_obj_set_size(ui.later, 340, 88);
-  lv_obj_set_pos(ui.later, 240 - 170, 322);
+  lv_obj_set_pos(ui.later, TORGET_DISPLAY_CENTER_X - 170, 322);
   lv_obj_set_style_radius(ui.later, 44, 0);
   lv_obj_set_style_border_width(ui.later, 2, 0);
   lv_obj_set_style_border_color(ui.later, COL_TRACK, 0);
@@ -177,7 +184,7 @@ void torget_ota_ui_create(void) {
   ui.update = lv_obj_create(ui.overlay);
   lv_obj_remove_style_all(ui.update);
   lv_obj_set_size(ui.update, 340, 88);
-  lv_obj_set_pos(ui.update, 240 - 170, 210);
+  lv_obj_set_pos(ui.update, TORGET_DISPLAY_CENTER_X - 170, 210);
   lv_obj_set_style_radius(ui.update, 44, 0);
   lv_obj_set_style_border_width(ui.update, 2, 0);
   lv_obj_set_style_border_color(ui.update, lv_color_white(), 0);
@@ -211,7 +218,12 @@ static const char *state_word(tg_ota_ui_state state) {
  * sitt ord och sin siffra — en dominerande siffra, inga bihang. */
 static const char *state_detail(tg_ota_ui_state state) {
   switch (state) {
-    case TG_OTA_UI_OPEN:      return "KEY3 CLOSES";
+    case TG_OTA_UI_OPEN:
+#if TORGET_DISPLAY_ROUND
+      return "TAP CLOSES";
+#else
+      return "KEY3 CLOSES";
+#endif
     case TG_OTA_UI_VERIFYING: return "SHA-256";
     case TG_OTA_UI_NOTICE:    return "";
     default:                  return "";
@@ -306,15 +318,18 @@ void torget_ota_ui_set(tg_ota_ui_state state, unsigned percent,
   /* Centrera mot bågens mitt när innehållet bytt bredd; %-tecknet hänger
    * på siffrornas nederkant som i mockupen. Detaljraden ligger under
    * mittsiffran, väl innanför bågens innerradie. */
-  lv_obj_align(ui.center, LV_ALIGN_CENTER, 0, 268 - 240);
+  lv_obj_align(ui.center, LV_ALIGN_CENTER, 0,
+               ARC_CENTER_Y - TORGET_DISPLAY_CENTER_Y);
   lv_obj_align_to(ui.pctsign, ui.center, LV_ALIGN_OUT_RIGHT_BOTTOM, 2, -14);
-  lv_obj_align(ui.detail, LV_ALIGN_CENTER, 0, 268 - 240 + 78);
+  lv_obj_align(ui.detail, LV_ALIGN_CENTER, 0,
+               ARC_CENTER_Y - TORGET_DISPLAY_CENTER_Y + 78);
   /* I NOTICE bor versionen INNE i ringen (under READY) — pillren äger
    * ytan under ringen. Övriga lägen behåller raden under ringen. */
   if (state == TG_OTA_UI_NOTICE)
     lv_obj_align(ui.version, LV_ALIGN_TOP_MID, 0, 130);
   else
-    lv_obj_align(ui.version, LV_ALIGN_TOP_MID, 0, 268 + ARC_SIZE / 2 + 10);
+    lv_obj_align(ui.version, LV_ALIGN_TOP_MID, 0,
+                 ARC_CENTER_Y + ARC_SIZE / 2 + 10);
 
   lv_obj_remove_flag(ui.overlay, LV_OBJ_FLAG_HIDDEN);
   lv_obj_move_foreground(ui.overlay);

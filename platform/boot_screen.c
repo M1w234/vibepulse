@@ -3,6 +3,7 @@
 #include "lvgl.h"
 
 #include "torget.h"
+#include "torget_display.h"
 
 /* Samma studio-tokens som OTA-ringen: vitt för det som hänt, muted för det
  * som väntar, äkta svart bakom. Wordmärket i attention-fonten (A-Z). */
@@ -22,8 +23,9 @@ static const char *const STEP_WORDS[3] = { "WIFI", "TIME", "DATA" };
 void torget_boot_screen_create(void) {
   ui.overlay = lv_obj_create(lv_layer_top());
   lv_obj_remove_style_all(ui.overlay);
-  lv_obj_set_size(ui.overlay, 480, 480);
+  lv_obj_set_size(ui.overlay, TORGET_DISPLAY_WIDTH, TORGET_DISPLAY_HEIGHT);
   lv_obj_set_pos(ui.overlay, 0, 0);
+  torget_display_clip(ui.overlay);
   lv_obj_set_style_bg_color(ui.overlay, lv_color_black(), 0);
   lv_obj_set_style_bg_opa(ui.overlay, LV_OPA_COVER, 0);
   /* Slukar touch precis som OTA-overlayn: fingret ska inte nå halvbyggda

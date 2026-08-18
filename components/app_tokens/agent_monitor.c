@@ -8,7 +8,7 @@
 #include "agent_monitor_policy.h"
 #include "needs_you_policy.h"
 #include "torget.h"
-#include "vibepulse_layout.generated.h"
+#include "vibepulse_layout.h"
 
 extern const lv_font_t plex_attention_18;
 extern const lv_font_t plex_attention_25;
@@ -317,21 +317,39 @@ static void create_completion(lv_obj_t *app_root) {
                       LV_EVENT_LONG_PRESSED, NULL);
 
   view->outline = bare(view->root);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->outline, 8, 8);
+  lv_obj_set_size(view->outline, 450, 450);
+#else
   lv_obj_set_pos(view->outline, 8, 8);
   lv_obj_set_size(view->outline, 464, 464);
+#endif
   lv_obj_set_style_bg_opa(view->outline, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_opa(view->outline, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(view->outline, 6, 0);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_style_radius(view->outline, LV_RADIUS_CIRCLE, 0);
+#else
   lv_obj_set_style_radius(view->outline, 36, 0);
+#endif
 
   view->provider = label(view->root, &plex_attention_18, COL_WHITE);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->provider, 80, 31);
+  lv_obj_set_size(view->provider, 306, 25);
+#else
   lv_obj_set_pos(view->provider, 20, 31);
   lv_obj_set_size(view->provider, 440, 25);
+#endif
   lv_obj_set_style_text_align(view->provider, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(view->provider, 3, 0);
 
   view->icon_ring = bare(view->root);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->icon_ring, 165, 77);
+#else
   lv_obj_set_pos(view->icon_ring, 172, 77);
+#endif
   lv_obj_set_size(view->icon_ring, 136, 136);
   lv_obj_set_style_bg_opa(view->icon_ring, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_opa(view->icon_ring, LV_OPA_COVER, 0);
@@ -339,7 +357,11 @@ static void create_completion(lv_obj_t *app_root) {
   lv_obj_set_style_radius(view->icon_ring, LV_RADIUS_CIRCLE, 0);
 
   lv_obj_t *claude_group = bare(view->root);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(claude_group, 177, 89);
+#else
   lv_obj_set_pos(claude_group, 184, 89);
+#endif
   lv_obj_set_size(claude_group, 112, 112);
   view->claude_icon = lv_image_create(claude_group);
   lv_image_set_src(view->claude_icon, &tk_img_claude);
@@ -349,28 +371,51 @@ static void create_completion(lv_obj_t *app_root) {
   lv_obj_set_style_image_recolor(view->claude_icon, COL_CLAUDE, 0);
   lv_obj_set_style_image_recolor_opa(view->claude_icon, LV_OPA_COVER, 0);
 
+#if TORGET_DISPLAY_ROUND
+  view->codex_icon = create_codex_icon(view->root, 177, 89);
+#else
   view->codex_icon = create_codex_icon(view->root, 184, 89);
+#endif
 
   view->title = label(view->root, &plex_attention_52, COL_WHITE);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->title, 7, 246);
+#else
   lv_obj_set_pos(view->title, 14, 246);
+#endif
   lv_obj_set_size(view->title, 452, 68);
   lv_obj_set_style_text_align(view->title, LV_TEXT_ALIGN_CENTER, 0);
 
   view->project = label(view->root, &plex_attention_25, COL_WHITE);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->project, 50, 321);
+  lv_obj_set_size(view->project, 366, 34);
+#else
   lv_obj_set_pos(view->project, 20, 321);
   lv_obj_set_size(view->project, 440, 34);
+#endif
   lv_obj_set_style_text_align(view->project, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(view->project, 2, 0);
 
   view->detail = label(view->root, &plex_ui_14, COL_MUTED);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->detail, 60, 365);
+  lv_obj_set_size(view->detail, 346, 25);
+#else
   lv_obj_set_pos(view->detail, 20, 365);
   lv_obj_set_size(view->detail, 440, 25);
+#endif
   lv_obj_set_style_text_align(view->detail, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(view->detail, 2, 0);
 
   view->dismiss = label(view->root, &plex_ui_14, COL_MUTED);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(view->dismiss, 80, 420);
+  lv_obj_set_size(view->dismiss, 306, 26);
+#else
   lv_obj_set_pos(view->dismiss, 20, 430);
   lv_obj_set_size(view->dismiss, 440, 26);
+#endif
   lv_obj_set_style_text_align(view->dismiss, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(view->dismiss, 2, 0);
   lv_label_set_text(view->dismiss, "TAP TO DISMISS");
@@ -525,41 +570,78 @@ static void create_needs_you(lv_obj_t *app_root) {
   lv_obj_add_event_cb(v->root, needs_you_root_event, LV_EVENT_CLICKED, NULL);
 
   v->frame = bare(v->root);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->frame, 8, 8);
+  lv_obj_set_size(v->frame, 450, 450);
+#else
   lv_obj_set_pos(v->frame, 14, 14);
   lv_obj_set_size(v->frame, 452, 452);
+#endif
   lv_obj_set_style_bg_opa(v->frame, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_color(v->frame, COL_CLAUDE, 0);
   lv_obj_set_style_border_opa(v->frame, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(v->frame, 2, 0);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_style_radius(v->frame, LV_RADIUS_CIRCLE, 0);
+#else
   lv_obj_set_style_radius(v->frame, 40, 0);
+#endif
 
   /* -- ATTRACT: the across-the-room alert, ring carrying the countdown ------ */
   v->a_group = ny_group(v->root);
+#if TORGET_DISPLAY_ROUND
+  v->a_ring = ny_ring(v->a_group, 233, 150, 78, 9);
+#else
   v->a_ring = ny_ring(v->a_group, 240, 150, 78, 9);
+#endif
   v->a_mascot = lv_image_create(v->a_group);
   lv_image_set_src(v->a_mascot, &tk_img_mascot_alert_8);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->a_mascot, 169, 96);
+#else
   lv_obj_set_pos(v->a_mascot, 176, 96);
+#endif
   lv_obj_remove_flag(v->a_mascot, LV_OBJ_FLAG_CLICKABLE);
-  v->a_word = ny_text(v->a_group, &plex_headline_48, COL_WHITE, 0, 278, 480, 0, C);
+  v->a_word = ny_text(v->a_group, &plex_headline_48, COL_WHITE, 0, 278, VP_SCREEN_W, 0, C);
   lv_label_set_text(v->a_word, "NEEDS YOU");
-  v->a_project = ny_text(v->a_group, &plex_text_21, COL_CLAUDE, 0, 332, 480, 3, C);
-  v->a_tap = ny_text(v->a_group, &plex_ui_16, COL_DIM, 0, 424, 480, 2, C);
+  v->a_project = ny_text(v->a_group, &plex_text_21, COL_CLAUDE, 0, 332, VP_SCREEN_W, 3, C);
+#if TORGET_DISPLAY_ROUND
+  v->a_tap = ny_text(v->a_group, &plex_ui_16, COL_DIM, 0, 410, VP_SCREEN_W, 2, C);
+#else
+  v->a_tap = ny_text(v->a_group, &plex_ui_16, COL_DIM, 0, 424, VP_SCREEN_W, 2, C);
+#endif
   lv_label_set_text(v->a_tap, "TAP TO ANSWER");
 
   /* -- Shared decision header: ring + mascot + eyebrow --------------------- */
   v->h_group = ny_group(v->root);
+#if TORGET_DISPLAY_ROUND
+  v->h_ring = ny_ring(v->h_group, 112, 112, 44, 8);
+#else
   v->h_ring = ny_ring(v->h_group, 80, 80, 44, 8);
+#endif
   v->h_mascot = lv_image_create(v->h_group);
   lv_image_set_src(v->h_mascot, &tk_img_mascot_asking_4);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->h_mascot, 80, 81);
+#else
   lv_obj_set_pos(v->h_mascot, 48, 49);
+#endif
   lv_obj_remove_flag(v->h_mascot, LV_OBJ_FLAG_CLICKABLE);
   /* 14 px keeps CLAUDE NEEDS YOU · PROJECT on one line beside the ring; the
    * design's 15 px has no full-ASCII raster and 16 px wrapped. */
+#if TORGET_DISPLAY_ROUND
+  v->h_eyebrow = ny_text(v->h_group, &plex_ui_14, COL_CLAUDE, 166, 66, 224, 1, L);
+#else
   v->h_eyebrow = ny_text(v->h_group, &plex_ui_14, COL_CLAUDE, 148, 46, 312, 1, L);
+#endif
 
   /* -- QUESTION body ------------------------------------------------------- */
   v->q_group = ny_group(v->root);
+#if TORGET_DISPLAY_ROUND
+  v->q_prompt = ny_text(v->q_group, &plex_body_27, COL_WHITE, 166, 91, 240, 0, L);
+#else
   v->q_prompt = ny_text(v->q_group, &plex_body_27, COL_WHITE, 148, 70, 300, 0, L);
+#endif
   /* Fixed band above the card (y140): two 27px lines. LONG_DOT (not WRAP)
    * ellipsizes instead of overrunning the recommendation card — the render
    * steps the font to 21px first so a long ask stays readable, not clipped.
@@ -567,24 +649,47 @@ static void create_needs_you(lv_obj_t *app_root) {
   lv_obj_set_height(v->q_prompt, 68);
   lv_label_set_long_mode(v->q_prompt, LV_LABEL_LONG_DOT);
   v->q_card = bare(v->q_group);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->q_card, 34, 170);
+  lv_obj_set_size(v->q_card, 398, 72);
+#else
   lv_obj_set_pos(v->q_card, 24, 140);
   lv_obj_set_size(v->q_card, 432, 92);
+#endif
   lv_obj_set_style_bg_opa(v->q_card, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_color(v->q_card, COL_HAIR, 0);
   lv_obj_set_style_border_opa(v->q_card, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(v->q_card, 2, 0);
   lv_obj_set_style_radius(v->q_card, 14, 0);
+#if TORGET_DISPLAY_ROUND
+  v->q_rec = ny_text(v->q_card, &plex_ui_14, COL_CLAUDE, 18, 9, 362, 1, L);
+#else
   v->q_rec = ny_text(v->q_card, &plex_ui_14, COL_CLAUDE, 20, 14, 392, 1, L);
+#endif
   lv_label_set_text(v->q_rec, "CLAUDE RECOMMENDS");
+#if TORGET_DISPLAY_ROUND
+  v->q_title = ny_text(v->q_card, &plex_body_27, COL_WHITE, 18, 28, 362, 0, L);
+  v->q_sub = ny_text(v->q_card, &plex_ui_16, COL_MUTED, 18, 55, 362, 0, L);
+  v->q_footer = ny_text(v->q_group, &plex_ui_14, COL_DIM, 80, 408, 306, 1, C);
+#else
   v->q_title = ny_text(v->q_card, &plex_body_27, COL_WHITE, 20, 34, 392, 0, L);
   v->q_sub = ny_text(v->q_card, &plex_ui_16, COL_MUTED, 20, 70, 392, 0, L);
   v->q_footer = ny_text(v->q_group, &plex_ui_14, COL_DIM, 0, 440, 480, 1, C);
+#endif
 
   /* -- APPROVAL body: the command is the hero, in mono --------------------- */
   v->p_group = ny_group(v->root);
+#if TORGET_DISPLAY_ROUND
+  v->p_desc = ny_text(v->p_group, &plex_body_27, COL_WHITE, 166, 91, 240, 0, L);
+#else
   v->p_desc = ny_text(v->p_group, &plex_body_27, COL_WHITE, 148, 70, 300, 0, L);
+#endif
   v->p_chip = bare(v->p_group);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->p_chip, 44, 170);
+#else
   lv_obj_set_pos(v->p_chip, 24, 146);
+#endif
   lv_obj_set_size(v->p_chip, 58, 26);
   lv_obj_set_style_bg_opa(v->p_chip, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_color(v->p_chip, COL_HAIR, 0);
@@ -593,7 +698,11 @@ static void create_needs_you(lv_obj_t *app_root) {
   lv_obj_set_style_radius(v->p_chip, 7, 0);
   v->p_chip_lbl = label(v->p_chip, &plex_ui_14, COL_MUTED);
   lv_obj_center(v->p_chip_lbl);
+#if TORGET_DISPLAY_ROUND
+  v->p_cmd = ny_text(v->p_group, &plex_mono_40, COL_WHITE, 44, 204, 378, 0, L);
+#else
   v->p_cmd = ny_text(v->p_group, &plex_mono_40, COL_WHITE, 24, 182, 432, 0, L);
+#endif
 
   /* -- Shared buttons: APPROVE always filled, DENY the one restrained red -- */
   v->approve = ny_button(v->root, "APPROVE", &plex_attention_25, COL_BLACK,
@@ -605,30 +714,50 @@ static void create_needs_you(lv_obj_t *app_root) {
 
   /* -- PRIVATE: no buttons; the mascot holds the secret at 60% ------------- */
   v->pv_group = ny_group(v->root);
+#if TORGET_DISPLAY_ROUND
+  v->pv_ring = ny_ring(v->pv_group, 233, 152, 72, 9);
+#else
   v->pv_ring = ny_ring(v->pv_group, 240, 152, 72, 9);
+#endif
   v->pv_mascot = lv_image_create(v->pv_group);
   lv_image_set_src(v->pv_mascot, &tk_img_mascot_neutral_7);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->pv_mascot, 177, 96);
+#else
   lv_obj_set_pos(v->pv_mascot, 184, 96);
+#endif
   lv_obj_set_style_image_opa(v->pv_mascot, 153, 0); /* 60%: private reads dim */
   lv_obj_remove_flag(v->pv_mascot, LV_OBJ_FLAG_CLICKABLE);
-  v->pv_title = ny_text(v->pv_group, &plex_body_27, COL_WHITE, 0, 274, 480, 1, C);
+  v->pv_title = ny_text(v->pv_group, &plex_body_27, COL_WHITE, 0, 274, VP_SCREEN_W, 1, C);
   lv_label_set_text(v->pv_title, "SOMETHING IS WAITING");
-  v->pv_sub = ny_text(v->pv_group, &plex_ui_16, COL_MUTED, 0, 324, 480, 0, C);
+  v->pv_sub = ny_text(v->pv_group, &plex_ui_16, COL_MUTED, 0, 324, VP_SCREEN_W, 0, C);
   lv_label_set_text(v->pv_sub, "Details stay on the Mac");
-  v->pv_tap = ny_text(v->pv_group, &plex_ui_16, COL_DIM, 0, 420, 480, 2, C);
+#if TORGET_DISPLAY_ROUND
+  v->pv_tap = ny_text(v->pv_group, &plex_ui_16, COL_DIM, 0, 410, VP_SCREEN_W, 2, C);
+#else
+  v->pv_tap = ny_text(v->pv_group, &plex_ui_16, COL_DIM, 0, 420, VP_SCREEN_W, 2, C);
+#endif
   lv_label_set_text(v->pv_tap, "TAP TO ANSWER AT YOUR DESK");
 
   /* -- PAYOFF: a static beat, no motion until the motion gate -------------- */
   v->po_group = ny_group(v->root);
   v->po_mascot = lv_image_create(v->po_group);
   lv_image_set_src(v->po_mascot, &tk_img_mascot_happy_8);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(v->po_mascot, 169, 120);
+#else
   lv_obj_set_pos(v->po_mascot, 176, 120);
+#endif
   lv_obj_remove_flag(v->po_mascot, LV_OBJ_FLAG_CLICKABLE);
   const int spark[5][3] = {{150, 110, 10}, {322, 96, 12}, {346, 180, 8},
                            {128, 196, 8}, {306, 236, 10}};
   for (int i = 0; i < 5; i++) {
     lv_obj_t *s = bare(v->po_group);
+#if TORGET_DISPLAY_ROUND
+    lv_obj_set_pos(s, spark[i][0] - 7, spark[i][1]);
+#else
     lv_obj_set_pos(s, spark[i][0], spark[i][1]);
+#endif
     lv_obj_set_size(s, spark[i][2], spark[i][2]);
     lv_obj_set_style_bg_color(s, COL_CLAUDE, 0);
     lv_obj_set_style_bg_opa(s, LV_OPA_COVER, 0);
@@ -636,9 +765,9 @@ static void create_needs_you(lv_obj_t *app_root) {
   }
   /* "ON IT" without the mockup's full stop: headline_48 is uppercase+digits
    * only, and extending that shared font would risk the burn-rate rasters. */
-  v->po_word = ny_text(v->po_group, &plex_headline_48, COL_WHITE, 0, 300, 480, 0, C);
+  v->po_word = ny_text(v->po_group, &plex_headline_48, COL_WHITE, 0, 300, VP_SCREEN_W, 0, C);
   lv_label_set_text(v->po_word, "ON IT");
-  v->po_echo = ny_text(v->po_group, &plex_ui_16, COL_MUTED, 0, 358, 480, 0, C);
+  v->po_echo = ny_text(v->po_group, &plex_ui_16, COL_MUTED, 0, 358, VP_SCREEN_W, 0, C);
 
   lv_obj_add_flag(v->root, LV_OBJ_FLAG_HIDDEN);
 }
@@ -764,10 +893,14 @@ static void render_needs_you(void) {
   lv_image_set_src(v->h_mascot, is_question ? &tk_img_mascot_asking_4
                                             : &tk_img_mascot_neutral_4);
   char eyebrow[80];
+#if TORGET_DISPLAY_ROUND
+  snprintf(eyebrow, sizeof eyebrow, "CLAUDE NEEDS YOU");
+#else
   if (project[0])
     snprintf(eyebrow, sizeof eyebrow, "CLAUDE NEEDS YOU \xC2\xB7 %s", project);
   else
     snprintf(eyebrow, sizeof eyebrow, "CLAUDE NEEDS YOU");
+#endif
   lv_label_set_text(v->h_eyebrow, eyebrow);
   ny_show(v->h_group, true);
 
@@ -778,7 +911,11 @@ static void render_needs_you(void) {
      * card instead of overrunning it. LONG_DOT ellipsizes the truly enormous. */
     lv_point_t qsz;
     lv_text_get_size(&qsz, p->has_prompt ? p->prompt : "", &plex_body_27, 0, 0,
+#if TORGET_DISPLAY_ROUND
+                     240, LV_TEXT_FLAG_NONE);
+#else
                      300, LV_TEXT_FLAG_NONE);
+#endif
     lv_obj_set_style_text_font(v->q_prompt,
                                qsz.y > 68 ? &plex_ui_21 : &plex_body_27, 0);
     ny_show(v->q_prompt, p->has_prompt);
@@ -814,27 +951,50 @@ static void render_needs_you(void) {
     lv_text_get_size(&measured, p->title, &plex_mono_40, 0, 0, LV_COORD_MAX,
                      LV_TEXT_FLAG_NONE);
     lv_obj_set_style_text_font(
+#if TORGET_DISPLAY_ROUND
+        v->p_cmd, measured.x > 378 ? &plex_mono_24 : &plex_mono_40, 0);
+#else
         v->p_cmd, measured.x > 432 ? &plex_mono_24 : &plex_mono_40, 0);
+#endif
     ny_show(v->p_group, true);
   }
 
   /* -- Buttons: every target >= 90 px; APPROVE filled and only where allowed */
   int approve_y = is_question ? 244 : 252;
   if (offer_approve) {
+#if TORGET_DISPLAY_ROUND
+    lv_obj_set_pos(v->approve, 44, approve_y);
+    lv_obj_set_size(v->approve, 378, 80);
+#else
     lv_obj_set_pos(v->approve, 24, approve_y);
     lv_obj_set_size(v->approve, 432, 96);
+#endif
     ny_show(v->approve, true);
   }
   if (offer_deny) {
+#if TORGET_DISPLAY_ROUND
+    int row_y = approve_y + 88;
+    lv_obj_set_pos(v->deny, 44, row_y);
+    lv_obj_set_size(v->deny, 181, 68);
+    ny_show(v->deny, true);
+    lv_obj_set_pos(v->leave, 241, row_y);
+    lv_obj_set_size(v->leave, 181, 68);
+#else
     int row_y = approve_y + 108;
     lv_obj_set_pos(v->deny, 24, row_y);
     lv_obj_set_size(v->deny, 208, 90);
     ny_show(v->deny, true);
     lv_obj_set_pos(v->leave, 248, row_y);
     lv_obj_set_size(v->leave, 208, 90);
+#endif
   } else {
+#if TORGET_DISPLAY_ROUND
+    lv_obj_set_pos(v->leave, 44, offer_approve ? approve_y + 88 : approve_y);
+    lv_obj_set_size(v->leave, 378, 68);
+#else
     lv_obj_set_pos(v->leave, 24, offer_approve ? approve_y + 106 : approve_y);
     lv_obj_set_size(v->leave, 432, 90);
+#endif
   }
   ny_show(v->leave, true);
 

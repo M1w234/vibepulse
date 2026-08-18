@@ -6,7 +6,7 @@
 #include "project_star_assets.h"
 #include "project_star_popup_policy.h"
 #include "project_star_style.h"
-#include "vibepulse_layout.generated.h"
+#include "vibepulse_layout.h"
 
 extern const lv_font_t plex_num_38;
 extern const lv_font_t plex_ui_21;
@@ -134,14 +134,33 @@ void tk_project_star_popup_create(lv_obj_t *app_root) {
 
   lv_obj_t *github_mark = lv_image_create(popup.root);
   lv_image_set_src(github_mark, &tk_img_github_mark_24);
+#if TORGET_DISPLAY_ROUND
+  lv_obj_set_pos(github_mark, 100, 48);
+#else
   lv_obj_set_pos(github_mark, 20, 20);
+#endif
   lv_obj_remove_flag(github_mark, LV_OBJ_FLAG_CLICKABLE);
 
+#if TORGET_DISPLAY_ROUND
+  popup.repo = label(popup.root, &plex_ui_16, COL_REPO,
+                     132, 50, 234, 24);
+#else
   popup.repo = label(popup.root, &plex_ui_16, COL_REPO,
                      55, 24, 405, 24);
+#endif
   lv_obj_set_style_text_align(popup.repo, LV_TEXT_ALIGN_LEFT, 0);
 
   /* Final state of the impact: one large, still, fully filled gold star. */
+#if TORGET_DISPLAY_ROUND
+  filled_star(popup.root, 123, 92, 220, 220);
+
+  popup.actor = label(popup.root, &plex_ui_21, COL_WHITE,
+                      50, 329, 366, 30);
+
+  filled_star(popup.root, 134, 378, 40, 40);
+  popup.count = label(popup.root, &plex_num_38, COL_WHITE,
+                      190, 378, 200, 46);
+#else
   filled_star(popup.root, 130, 80, 220, 220);
 
   popup.actor = label(popup.root, &plex_ui_21, COL_WHITE,
@@ -150,10 +169,16 @@ void tk_project_star_popup_create(lv_obj_t *app_root) {
   filled_star(popup.root, 145, 380, 40, 40);
   popup.count = label(popup.root, &plex_num_38, COL_WHITE,
                       200, 380, 240, 46);
+#endif
   lv_obj_set_style_text_align(popup.count, LV_TEXT_ALIGN_LEFT, 0);
 
+#if TORGET_DISPLAY_ROUND
+  popup.dismiss = label(popup.root, &plex_ui_14, COL_MUTED,
+                        80, 430, 306, 20);
+#else
   popup.dismiss = label(popup.root, &plex_ui_14, COL_MUTED,
                         20, 442, 440, 20);
+#endif
   lv_obj_set_style_text_letter_space(popup.dismiss, 2, 0);
   lv_label_set_text(popup.dismiss, "TAP TO DISMISS");
 

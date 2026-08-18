@@ -35,7 +35,7 @@ typedef struct {
   const char *name;       /* versaler, visas under ikonen: "SOLELKOLLEN" */
   torget_icon_t icon;
 
-  /* Bygg appens hela UI i root (en 480×480-låda plattformen äger och
+  /* Bygg appens hela UI i root (en panelstor låda plattformen äger och
    * visar/gömmer). Körs EN gång vid boot, under UI-låset, innan nätet är
    * uppe. Starta appens egen hämttask här — den ska själv vänta på
    * torget_net_wait() innan den rör nätverket. */
