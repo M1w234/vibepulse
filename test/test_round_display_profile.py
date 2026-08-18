@@ -8,6 +8,12 @@ layout = (root / "components/app_tokens/vibepulse_layout.h").read_text(
 )
 sim_cmake = (root / "sim/CMakeLists.txt").read_text(encoding="utf-8")
 sim_main = (root / "sim/main.c").read_text(encoding="utf-8")
+root_cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
+target_cmake = (root / "main/CMakeLists.txt").read_text(encoding="utf-8")
+manifest = (root / "main/idf_component.yml").read_text(encoding="utf-8")
+round_builder = (root / "tools/build-round-1.75c.sh").read_text(
+    encoding="utf-8"
+)
 platform_ui = (root / "platform/torget_ui.c").read_text(encoding="utf-8")
 generated = (
     root / "components/app_tokens/vibepulse_layout.generated.h"
@@ -37,6 +43,26 @@ for required in (
 assert "lv_sdl_window_create(TORGET_DISPLAY_WIDTH," in sim_main
 assert "TORGET_DISPLAY_HEIGHT);" in sim_main
 assert 'dump_frame("launcher-round")' in sim_main
+
+# The hardware port is opt-in and compile-only. Default firmware remains the
+# square board, while the round target gets a separate BSP, lock and build dir.
+for required in (
+    'set(_TORGET_BOARD_DEFAULT "square-2.16")',
+    'TORGET_BOARD STREQUAL "round-1.75c"',
+    "dependencies.lock.round-1.75c",
+    "TORGET_DISPLAY_WIDTH=466",
+    "TORGET_DISPLAY_HEIGHT=466",
+    "TORGET_DISPLAY_ROUND=1",
+):
+    assert required in root_cmake, f"missing round firmware contract: {required}"
+
+assert "waveshare/esp32_s3_touch_amoled_1_75c" in manifest
+assert '$TORGET_BOARD == round-1.75c' in manifest
+assert "waveshare__esp32_s3_touch_amoled_1_75c" in target_cmake
+assert 'list(APPEND TORGET_MAIN_SRCS "rotation.c")' in target_cmake
+assert "export TORGET_BOARD=round-1.75c" in round_builder
+assert "build-round-1.75c build" in round_builder
+assert "flash" not in round_builder.split("exec idf.py", 1)[-1]
 
 # Round geometry is an override around the generated square source, not a
 # rewrite of it. The screen and content roots must clip to the physical circle.

@@ -201,4 +201,5 @@ cd ..
   tools.tokenserver.test_update_prices \
   tools.tokenserver.test_codex_usage \
   tools.tokenserver.test_interactions \
+  tools.tokenserver.test_install_macos \
   tools.tokenserver.test_smoke -v

@@ -4,9 +4,19 @@
 ## ../README.md och reconen i ../spec/hardware.md.
 dependencies:
   idf: ">=5.5"
-  waveshare/esp32_s3_touch_amoled_2_16: "^2.0.1"
+  waveshare/esp32_s3_touch_amoled_2_16:
+    version: "^2.0.1"
+    rules:
+      - if: "$TORGET_BOARD == square-2.16"
+  waveshare/esp32_s3_touch_amoled_1_75c:
+    version: "^3.0.0"
+    rules:
+      - if: "$TORGET_BOARD == round-1.75c"
   ## IMU:n för auto-rotationen (P24) — samma leverantör som BSP:n.
-  waveshare/qmi8658: "^2.0.0"
+  waveshare/qmi8658:
+    version: "^2.0.0"
+    rules:
+      - if: "$TORGET_BOARD == square-2.16"
   ## Vibbe (app_buddy, delas in från ~/Buddy): USB-ljudkortet mot Macens
   ## ChatGPT Voice + wake word-motorn. tinyusb följer med usb_device_uac.
   espressif/usb_device_uac: "^1.3.1"

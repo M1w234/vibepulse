@@ -15,6 +15,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 
 #include "esp_app_desc.h"
 #include "esp_event.h"
@@ -38,11 +39,15 @@
 
 #include "boot_health.h"
 #include "boot_screen.h"
+#ifndef TORGET_BOARD_ROUND_1_75C
 #include "button_policy.h"
+#endif
 #include "needs_you_net.h"
 #include "ota_service.h"
 #include "ota_ui.h"
+#ifndef TORGET_BOARD_ROUND_1_75C
 #include "rotation.h"
+#endif
 #include "secrets.h"
 #include "torget.h"
 
@@ -78,6 +83,7 @@ static lv_indev_t *s_touch;
 static EventGroupHandle_t s_net_events;
 #define WIFI_GOT_IP BIT0
 #define NET_READY   BIT1 /* IP + SNTP: TLS kräver rimlig tid */
+static _Atomic bool s_time_ready;
 
 /* ------------------------------------------------- plattforms-API:t (torget.h) */
 
@@ -149,19 +155,39 @@ static bool s_first_start = true;
 
 static const char *const s_ssid[2] = { TG_WIFI_SSID, TG_WIFI2_SSID };
 static const char *const s_pass[2] = { TG_WIFI_PASS, TG_WIFI2_PASS };
-static int s_nat;         /* vilket av näten vi jagar just nu             */
+static _Atomic int s_nat; /* vilket av näten vi jagar just nu             */
 static int s_nat_missar;  /* missar i rad på DET nätet                    */
+static TimerHandle_t s_wifi_reconnect_timer;
 
 /* 4 missar ≈ 10-15 s per nät innan vi provar det andra — snabbt nog för
  * bilen, trögt nog att inte fladdra när hemmanätet har en dålig stund. */
 #define NAT_MISSAR_INNAN_BYTE 4
 
-static void wifi_apply(int idx) {
+static esp_err_t wifi_apply(int idx) {
   wifi_config_t cfg = { 0 };
   strlcpy((char *)cfg.sta.ssid, s_ssid[idx], sizeof cfg.sta.ssid);
   strlcpy((char *)cfg.sta.password, s_pass[idx], sizeof cfg.sta.password);
   cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &cfg));
+  return esp_wifi_set_config(WIFI_IF_STA, &cfg);
+}
+
+/* Återanslutning får inte sova i ESP:s event-loop. Den gamla tvåsekunders-
+ * fördröjningen blockerade även andra IP/WiFi-händelser och gjorde en vanlig
+ * dock-/hotspotväxling onödigt skör. En one-shot FreeRTOS-timer flyttar både
+ * eventuell nätväxling och connect-anropet till timer-tasken. */
+static void wifi_reconnect_timer_cb(TimerHandle_t timer) {
+  (void)timer;
+  int idx = atomic_load(&s_nat);
+  esp_err_t err = wifi_apply(idx);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "kunde inte välja WiFi-nätet \"%s\": %s",
+             s_ssid[idx], esp_err_to_name(err));
+    return;
+  }
+  err = esp_wifi_connect();
+  if (err != ESP_OK)
+    ESP_LOGW(TAG, "återanslutning till \"%s\" kunde inte starta: %s",
+             s_ssid[idx], esp_err_to_name(err));
 }
 
 static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
@@ -170,27 +196,33 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
     if (s_first_start) { s_first_start = false; return; } /* nättasken sköter första */
     esp_wifi_connect();
   } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
-    xEventGroupClearBits(s_net_events, WIFI_GOT_IP);
+    xEventGroupClearBits(s_net_events, WIFI_GOT_IP | NET_READY);
+    int idx = atomic_load(&s_nat);
     /* Orsakskoden är diagnosen: 201 = nätet syns inte alls (fel namn, eller
      * bara 5 GHz — S3:an hör enbart 2,4 GHz), 15/204 = fel lösenord. */
     ESP_LOGW(TAG, "WiFi tappat (\"%s\", orsak %d), återansluter",
-             s_ssid[s_nat], ((wifi_event_sta_disconnected_t *)data)->reason);
+             s_ssid[idx], ((wifi_event_sta_disconnected_t *)data)->reason);
     /* Växelbruk hem/hotspot: efter NAT_MISSAR_INNAN_BYTE missar i rad provas
      * det andra nätet (om ifyllt). Ingen prioritet — det som svarar vinner,
      * och tappas det börjar jakten om. */
     if (s_ssid[1][0] != '\0' && ++s_nat_missar >= NAT_MISSAR_INNAN_BYTE) {
-      s_nat = !s_nat;
+      idx = !idx;
+      atomic_store(&s_nat, idx);
       s_nat_missar = 0;
-      ESP_LOGI(TAG, "provar \"%s\" i stället", s_ssid[s_nat]);
-      wifi_apply(s_nat);
+      ESP_LOGI(TAG, "provar \"%s\" i stället", s_ssid[idx]);
     }
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    esp_wifi_connect();
+    if (xTimerReset(s_wifi_reconnect_timer, 0) != pdPASS)
+      ESP_LOGE(TAG, "kunde inte köa WiFi-återanslutning");
   } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
-    ESP_LOGI(TAG, "WiFi uppe (\"%s\")", s_ssid[s_nat]);
+    int idx = atomic_load(&s_nat);
+    ESP_LOGI(TAG, "WiFi uppe (\"%s\")", s_ssid[idx]);
     torget_boot_screen_stage(TG_BOOT_WIFI_UP);
     s_nat_missar = 0;
     xEventGroupSetBits(s_net_events, WIFI_GOT_IP);
+    /* Klockan överlever ett vanligt WiFi-byte. Första boot släpps däremot
+     * inte fram förrän nättasken verkligen fått sitt SNTP-kvitto. */
+    if (atomic_load(&s_time_ready))
+      xEventGroupSetBits(s_net_events, NET_READY);
   }
 }
 
@@ -201,26 +233,36 @@ static void wifi_start(void) {
 
   wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&init));
+  s_wifi_reconnect_timer = xTimerCreate(
+      "wifi-reconnect", pdMS_TO_TICKS(2000), pdFALSE, NULL,
+      wifi_reconnect_timer_cb);
+  assert(s_wifi_reconnect_timer);
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
     WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event, NULL, NULL));
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
     IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event, NULL, NULL));
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  wifi_apply(0);                  /* hemmanätet först; växelbruket tar över */
+  ESP_ERROR_CHECK(wifi_apply(0)); /* hemmanätet först; växelbruket tar över */
   ESP_ERROR_CHECK(esp_wifi_start());
 }
 
 /* TLS kräver en rimlig klocka: utan tid är serverns certifikat "ännu inte
  * giltigt" och varje HTTPS-hämtning faller. Kortets RTC är inte batteri-
  * backad, så SNTP är förutsättningen för NET_READY. */
-static void time_sync(void) {
+static bool time_sync(void) {
+  static bool initialized;
   esp_sntp_config_t cfg = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
-  ESP_ERROR_CHECK(esp_netif_sntp_init(&cfg));
-  if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(20000)) != ESP_OK)
+  if (!initialized) {
+    ESP_ERROR_CHECK(esp_netif_sntp_init(&cfg));
+    initialized = true;
+  }
+  if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(20000)) != ESP_OK) {
     ESP_LOGW(TAG, "ingen tid från SNTP ännu, apparnas hämtningar får vänta på den");
-  else
-    ESP_LOGI(TAG, "tid synkad");
+    return false;
+  }
+  ESP_LOGI(TAG, "tid synkad");
+  return true;
 }
 
 /* Plattformens nättask: koppla upp, synka tid, släpp fram apparna
@@ -231,8 +273,13 @@ static void net_task(void *arg) {
   scan_debug();
   esp_wifi_connect();
   xEventGroupWaitBits(s_net_events, WIFI_GOT_IP, pdFALSE, pdTRUE, portMAX_DELAY);
-  time_sync();
+  while (!time_sync()) {
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    xEventGroupWaitBits(s_net_events, WIFI_GOT_IP, pdFALSE, pdTRUE,
+                        portMAX_DELAY);
+  }
   torget_boot_screen_stage(TG_BOOT_TIME_OK);
+  atomic_store(&s_time_ready, true);
   xEventGroupSetBits(s_net_events, NET_READY);
   vTaskDelete(NULL);
 }
@@ -272,7 +319,9 @@ static void tick_cb(lv_timer_t *t) {
      * ritpipen fastnar tyst (frysjakten 2026-08-16: LVGL:s interna pool
      * svalt blocket → låst render). Larmet gör en framtida regression
      * högljudd i stället för tyst. Marginal ×2 = andrum för TLS/WiFi-spikar. */
-    const unsigned flush_dma = (unsigned)DISPLAY_FLUSH_ROWS * 480u * 2u;
+    const unsigned flush_dma =
+        (unsigned)DISPLAY_FLUSH_ROWS * BSP_LCD_H_RES *
+        BSP_LCD_BITS_PER_PIXEL / 8u;
     if (dma_largest < flush_dma * 2u)
       ESP_LOGW(TAG, "LÅGT DMA-block: %u byte (flush behöver %u) — nära fryströskeln",
                dma_largest, flush_dma);
@@ -304,6 +353,7 @@ static void tick_cb(lv_timer_t *t) {
     }
   }
 
+#ifndef TORGET_BOARD_ROUND_1_75C
   static tg_button_policy key3;
   bool key3_down = gpio_get_level(GPIO_NUM_18) == 0;
   tg_button_action key3_action = tg_button_update(&key3, key3_down, now);
@@ -330,6 +380,7 @@ static void tick_cb(lv_timer_t *t) {
   } else if (key3_action == TG_BUTTON_OPEN_MAINTENANCE) {
     torget_ota_service_open_maintenance();
   }
+#endif
 
   int target = ((now - s_last_activity_us) > NIGHT_AFTER_US
                 && (now - s_last_touch_us) > WAKE_HOLD_US)
@@ -412,7 +463,13 @@ static void display_start(void) {
 
   /* Touchparet hör ihop med MADCTL 0xA0 — ändra aldrig ena sidan ensam. */
   bsp_display_cfg_t touch_cfg = {
+#ifdef TORGET_BOARD_ROUND_1_75C
+    /* Vendor 1.75C BSP default. Physical edge/touch verification waits for
+     * the ordered unit; do not inherit the square board's transform. */
+    .touch_flags = { .swap_xy = 0, .mirror_x = 1, .mirror_y = 1 },
+#else
     .touch_flags = { .swap_xy = 1, .mirror_x = 0, .mirror_y = 1 },
+#endif
   };
   esp_lcd_touch_handle_t tp = NULL;
   ESP_ERROR_CHECK(bsp_touch_new(&touch_cfg, &tp));
@@ -436,6 +493,7 @@ static void display_start(void) {
  * fotoforensik. Ser du en ljus kantlinje i ett läge: justera det lägets
  * par (6 på den axel linjen sitter, spegelvänt om den flyttar till
  * motsatt kant). */
+#ifndef TORGET_BOARD_ROUND_1_75C
 esp_err_t torget_display_rotation_set(bsp_display_rotation_t rotation) {
   static const uint8_t MADCTL[4] = { 0x00, 0x60, 0xC0, 0xA0 };
   static const int GAP[4][2] = { /* {x_gap, y_gap} per läge */
@@ -451,6 +509,7 @@ esp_err_t torget_display_rotation_set(bsp_display_rotation_t rotation) {
   esp_lcd_panel_set_gap(s_panel, GAP[rotation][0], GAP[rotation][1]);
   return esp_lcd_panel_io_tx_param(s_panel_io, lcd_cmd, &MADCTL[rotation], 1);
 }
+#endif
 
 /* ------------------------------------------------------------------- start */
 
@@ -517,6 +576,7 @@ void app_main(void) {
    * bootens fade-in — samma ramp som nattväckningen använder. */
   bsp_display_brightness_set(0);
   /* s_touch sattes i display_start — BSP:ns accessor vet inget om vår start. */
+#ifndef TORGET_BOARD_ROUND_1_75C
   sg_rotation_start(s_touch); /* P24: bilden följer med när enheten vrids */
 
   /* KEY3 (GPIO18, aktiv låg enligt spec/hardware.md): intern pullup,
@@ -527,6 +587,9 @@ void app_main(void) {
     .pull_up_en = GPIO_PULLUP_ENABLE,
   };
   ESP_ERROR_CHECK(gpio_config(&key3));
+#else
+  ESP_LOGI(TAG, "1.75C-profil: fysisk knapp och IMU-rotation avstängda tills hårdvarugrinden");
+#endif
 
   /* Boot räknas som aktivitet: skärmen får sina 15 min att visa upp sig
    * innan första nattdimningen, även om ingen app hunnit rapportera liv. */
@@ -549,8 +612,10 @@ void app_main(void) {
   /* Fysisk sanning i loggen: KEY3:s råa nivå vid boot. Låg utan finger =
    * pinnen är inte att lita på förrän knappolicyns väpning släppt igenom
    * den (så hände 2026-08-14, då ett fönster öppnade sig självt). */
+#ifndef TORGET_BOARD_ROUND_1_75C
   ESP_LOGI(TAG, "KEY3 rå nivå vid boot: %d (1 = släppt)",
            gpio_get_level(GPIO_NUM_18));
+#endif
 
   wifi_start();
   /* Nättasken FÖRE OTA-vakten: apparnas dataväg är plattformens kritiska

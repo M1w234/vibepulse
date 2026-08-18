@@ -28,6 +28,12 @@ CONFIG_SPIRAM_RODATA=y
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 CONFIG_FREERTOS_HZ=1000
 
+# Make MacBook Bonjour names (for example michael-macbook.local) resolvable
+# through the normal getaddrinfo path used by esp_http_client. This is what
+# lets one firmware image follow the Mac between home Wi-Fi and a hotspot
+# without baking a DHCP address into secrets.h.
+CONFIG_LWIP_DNS_SUPPORT_MDNS_QUERIES=y
+
 # LVGL: bara de widgets UI:t faktiskt använder. Montserrat 14 finns kvar som
 # LV_FONT_DEFAULT — våra Plex-fonter sätts explicit på varje etikett, men
 # LVGL vill ha en defaultfont som existerar.

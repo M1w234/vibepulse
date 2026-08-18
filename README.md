@@ -300,13 +300,19 @@ understand how the pieces fit together.
    panel's draw makes the board bounce off the bus or hang, which looks
    like a flaky cable. After flashing, run the screen from its own USB
    power supply, not your computer.
-3. Start the service on your Mac. Pure Python stdlib, nothing to install:
+3. Install and start the service on your Mac. Pure Python stdlib, nothing
+   else to install:
 
    ```
-   python3 tools/tokenserver/tokenserver.py
+   ./tools/tokenserver/install-macos
    ```
 
-   Autostart on login: see [tools/tokenserver/README.md](tools/tokenserver/README.md).
+   The command generates a LaunchAgent from the current checkout, starts it,
+   verifies `http://127.0.0.1:8737`, and prints the exact Bonjour URL for
+   `secrets.h`. It restarts after a crash and at login. Preview the generated
+   plist without changing anything with `./tools/tokenserver/install-macos
+   --dry-run`. Options for GitHub, Claude/Codex plan labels, and Needs You are
+   documented in [tools/tokenserver/README.md](tools/tokenserver/README.md).
 
 ## Over-the-air updates
 
@@ -362,6 +368,16 @@ cmake -S sim -B sim/build-round -G Ninja -DTORGET_SIM_PROFILE=round-1.75c
 ninja -C sim/build-round
 ./sim/build-round/torget-sim
 ```
+
+Its firmware also has an isolated compile-only target:
+
+```sh
+./tools/build-round-1.75c.sh
+```
+
+That command selects Waveshare's 1.75C BSP, uses a separate dependency lock
+and build directory, and never flashes a device. The existing `idf.py build`
+continues to target the square 2.16-inch board.
 
 It clips the same interface to the physical circle and reflows the dense
 states instead of shrinking the square UI. Target-firmware and hardware

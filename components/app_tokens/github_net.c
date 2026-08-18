@@ -32,6 +32,7 @@ static void github_net_task(void *arg) {
   vTaskDelay(pdMS_TO_TICKS(20000));
 
   for (;;) {
+    torget_net_wait();
     tk_github_status status;
     if (torget_http_get(TK_GITHUB_URL, body, sizeof body, &len) &&
         tk_github_status_parse(body, len, &status)) {

@@ -1,6 +1,7 @@
 # tokenserver — VibePulse Mac-tjänst
 
-> **English quickstart:** `python3 tokenserver.py`. Pure Python 3 stdlib,
+> **English quickstart:** from the repository root run
+> `./tools/tokenserver/install-macos`. Pure Python 3 stdlib,
 > nothing to install. It reads your local Claude Code/Codex logs and serves
 > `/api/tokens` + `/api/agent-status` + `/api/max-tracker` on port 8737 for
 > the screen. Add `--github-repo owner/repository` for the optional public
@@ -8,12 +9,30 @@
 > `--claude-plan {pro,max5x,max20x}` and/or `--codex-plan
 > {plus,pro}` to show a plan badge on the Max Tracker pages; both flags are
 > optional and purely cosmetic (a display label, never used in any
-> percentage math). Autostart on login: `cp se.torget.tokenserver.plist
-> ~/Library/LaunchAgents/ && launchctl load
-> ~/Library/LaunchAgents/se.torget.tokenserver.plist` (edit the path inside
-> if the repo isn't at `~/Torget`). Privacy contract: only percentages and
+> percentage math). The installer generates an absolute-path LaunchAgent
+> for the checkout and Python you actually invoked, starts it, and verifies
+> the local endpoint. Privacy contract: only percentages and
 > counts are ever served; no prompts, commands or file contents are stored.
 > Full details below in Swedish. Your agent translates.
+
+Preview without installing:
+
+```sh
+./tools/tokenserver/install-macos --dry-run
+```
+
+Common optional setup:
+
+```sh
+./tools/tokenserver/install-macos \
+  --github-repo owner/repository \
+  --claude-plan max20x --codex-plan pro \
+  --plan claude=200 --plan codex=20
+```
+
+Add `--interactions` only when you intentionally enable the paired Needs You
+answer channel. `--interaction-detail` additionally sends question/command
+detail to the panel and requires `--interactions`.
 
 Serverar Claude- och Codex-användningen som platt JSON enligt glance-
 mönstret (kontrakt v2). Skärmen hämtar `/api/tokens` över LAN var 30:e

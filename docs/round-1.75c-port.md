@@ -10,6 +10,11 @@ Target board: Waveshare ESP32-S3-Touch-AMOLED-1.75C, 466×466 circular AMOLED.
 - Round-specific raster contracts guard large percentage edge clearance and
   every `Needs You` decision state against copy overlap and curved-edge loss.
 - The default `square` simulator remains byte-for-byte identical to the upstream 480×480 capture set.
+- `tools/build-round-1.75c.sh` selects the official 1.75C BSP in an isolated
+  build directory and dependency lock; it has no flash action.
+- The round firmware compiles out the square board's GPIO18 button and
+  QMI8658/MADCTL auto-rotation calibration. Touch uses the vendor BSP default
+  until it can be measured on the ordered unit.
 
 Build and capture the round profile:
 
@@ -20,9 +25,16 @@ SDL_VIDEODRIVER=dummy TORGET_CAPTURE_DIR=/tmp/vibepulse-round \
   ./sim/build-round/torget-sim --vibepulse-static-qa
 ```
 
+Compile the round firmware without flashing:
+
+```sh
+./tools/build-round-1.75c.sh
+```
+
 ## Deliberately not claimed yet
 
-The firmware target still names the square 2.16-inch BSP. It must not be flashed to the ordered board in this state.
+The 1.75C firmware target is compile-only. It must not be called flash-ready
+or installed on the ordered board until the hardware-arrival gate below.
 
 The official round-board reference currently uses:
 
@@ -30,7 +42,11 @@ The official round-board reference currently uses:
 - LVGL `9.5.0`
 - ESP-IDF `5.5.5` or `6.0.2`
 
-Switching that dependency is only the first target step. The existing custom touch transform, QMI8658 orientation calibration, CO5300 MADCTL/gap table, GPIO18 `KEY3` behavior, power management, brightness, and sleep/wake behavior were learned on the square board. They are not portable evidence for the round board and remain disabled-by-design work until the device is present.
+Selecting that dependency is only the first target step. The existing custom
+touch transform, QMI8658 orientation calibration, CO5300 MADCTL/gap table,
+GPIO18 `KEY3` behavior, power management, brightness, and sleep/wake behavior
+were learned on the square board. They are not portable evidence for the round
+board and remain disabled or vendor-default work until the device is present.
 
 ## Hardware arrival gate
 

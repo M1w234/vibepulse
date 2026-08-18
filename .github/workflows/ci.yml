@@ -29,7 +29,7 @@ jobs:
           python-version: "3.12"
       - name: Run tokenserver unit tests
         run: |
-          # Same eleven modules as test/run.sh, same order. The lists
+          # Same twelve modules as test/run.sh, same order. The lists
           # drifting apart is how a green CI hid a runtime NameError in
           # PR #11 (test_interactions was missing) — keep them in sync.
           python -m unittest \
@@ -43,11 +43,20 @@ jobs:
             tools.tokenserver.test_update_prices \
             tools.tokenserver.test_codex_usage \
             tools.tokenserver.test_interactions \
+            tools.tokenserver.test_install_macos \
             tools.tokenserver.test_smoke -v
 
   firmware:
-    name: ESP32-S3 firmware build
+    name: ESP32-S3 firmware build (${{ matrix.board }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: square-2.16
+            build_dir: build
+          - board: round-1.75c
+            build_dir: build-round-1.75c
     steps:
       - uses: actions/checkout@v4
       # CI has no real WiFi or LAN service. Build the opt-in path anyway so
@@ -60,7 +69,9 @@ jobs:
           sed -i 's/TK_GITHUB_SOUND_ENABLED 0/TK_GITHUB_SOUND_ENABLED 1/' secrets.h
       - name: Build with ESP-IDF 5.5
         uses: espressif/esp-idf-ci-action@v1
+        env:
+          TORGET_BOARD: ${{ matrix.board }}
         with:
           esp_idf_version: v5.5.2
           target: esp32s3
-          command: idf.py build
+          command: idf.py -B ${{ matrix.build_dir }} build

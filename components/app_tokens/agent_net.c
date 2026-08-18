@@ -107,14 +107,18 @@ static void agent_net_task(void *arg) {
     .user_data = &response,
   };
   esp_http_client_handle_t client = esp_http_client_init(&cfg);
-  if (!client) {
-    ESP_LOGE(TAG, "agentstatus kunde inte skapa HTTP-klient");
-    vTaskDelete(NULL);
-    return;
-  }
-
-  ESP_LOGI(TAG, "agentstatuspollning startad");
+  if (client)
+    ESP_LOGI(TAG, "agentstatuspollning startad");
   for (;;) {
+    torget_net_wait();
+    /* A transient allocation failure during boot must not permanently remove
+     * the highest-value screen. Retry quietly after the network/heap settles. */
+    if (!client) {
+      ESP_LOGE(TAG, "agentstatus kunde inte skapa HTTP-klient — försöker igen");
+      vTaskDelay(pdMS_TO_TICKS(5000));
+      client = esp_http_client_init(&cfg);
+      continue;
+    }
     tk_agent_http_fetch_result fetch =
         tk_agent_http_fetch_bounded(client, &response, &status_http_io);
     esp_err_t err = fetch == TK_AGENT_HTTP_FETCH_OK ? ESP_OK : ESP_FAIL;

@@ -7,6 +7,26 @@
 # Det som delas mellan dem är platform/, components/app_* (utom net.c) och
 # kärnkomponenterna — samma kod på Macen som på hyllan, per design.
 cmake_minimum_required(VERSION 3.16)
+
+# One source tree, two explicit hardware targets. The square target remains the
+# default so an existing `idf.py build` cannot silently change boards. The
+# round target is selected by tools/build-round-1.75c.sh, gets its own managed-
+# dependency lock, and compiles out every square-only physical calibration.
+set(_TORGET_BOARD_DEFAULT "square-2.16")
+if(DEFINED ENV{TORGET_BOARD} AND NOT "$ENV{TORGET_BOARD}" STREQUAL "")
+  set(_TORGET_BOARD_DEFAULT "$ENV{TORGET_BOARD}")
+endif()
+set(TORGET_BOARD "${_TORGET_BOARD_DEFAULT}" CACHE STRING
+    "Hardware target: square-2.16 or round-1.75c")
+set_property(CACHE TORGET_BOARD PROPERTY STRINGS square-2.16 round-1.75c)
+if(NOT TORGET_BOARD STREQUAL "square-2.16" AND
+   NOT TORGET_BOARD STREQUAL "round-1.75c")
+  message(FATAL_ERROR
+    "Unknown TORGET_BOARD='${TORGET_BOARD}' (use square-2.16 or round-1.75c)")
+endif()
+# The component manifest is evaluated during early expansion and can only see
+# environment variables, not this cache variable.
+set(ENV{TORGET_BOARD} "${TORGET_BOARD}")
 # third_party/ innehåller vendrade komponenter (cjson) som apparna delar.
 # Vibbe (app_buddy) bor i sitt eget repo (~/Buddy) och delas in härifrån —
 # EN källa, ingen kopiedrift (inflyttsbeslutet 2026-08-07: "alla tre ska bo
@@ -40,7 +60,13 @@ set(TORGET_BUDDY_DIR "$ENV{HOME}/Buddy/components"
 # miljön så att main grindar sitt REQUIRES på exakt samma sökväg som grindar
 # EXTRA_COMPONENT_DIRS nedan. Utan detta sätts TORGET_HAVE_* men komponentens
 # include-katalog dras aldrig in, och registry.c faller på app_solelkollen.h.
-set(ENV{TORGET_SOLELKOLLEN_DIR} "${TORGET_SOLELKOLLEN_DIR}")
+if(TORGET_BOARD STREQUAL "round-1.75c")
+  # The first round firmware is intentionally VibePulse-only. Companion apps
+  # have not had their full-screen surfaces reviewed for this physical circle.
+  set(ENV{TORGET_SOLELKOLLEN_DIR} "")
+else()
+  set(ENV{TORGET_SOLELKOLLEN_DIR} "${TORGET_SOLELKOLLEN_DIR}")
+endif()
 # Tom spegel när Vibbe är bortvald: main/ grindar på $ENV{}-sökvägen, och en
 # tom sträng gör båda expansionspassen eniga om att Buddy inte finns — även
 # om skalet råkar ha TORGET_BUDDY_DIR exporterad sedan tidigare.
@@ -50,7 +76,8 @@ else()
   set(ENV{TORGET_BUDDY_DIR} "")
 endif()
 
-if(EXISTS "${TORGET_SOLELKOLLEN_DIR}/app_solelkollen")
+if(NOT TORGET_BOARD STREQUAL "round-1.75c" AND
+   EXISTS "${TORGET_SOLELKOLLEN_DIR}/app_solelkollen")
   list(APPEND EXTRA_COMPONENT_DIRS "${TORGET_SOLELKOLLEN_DIR}")
 else()
   message(STATUS "Torget: Solelkollen saknas — bygger utan den (companion-app)")
@@ -63,6 +90,18 @@ else()
   message(STATUS "Torget: Vibbe/Buddy är bortvald (TORGET_WITH_BUDDY=OFF, frysläxan 2026-08-14)")
 endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+# Conditional manifests need independent locks or alternating target builds
+# rewrite one another's dependency graph. Espressif documents this build
+# property specifically for multi-target projects.
+if(TORGET_BOARD STREQUAL "round-1.75c")
+  idf_build_set_property(
+    DEPENDENCIES_LOCK
+    "${CMAKE_CURRENT_SOURCE_DIR}/dependencies.lock.round-1.75c")
+  idf_build_set_property(COMPILE_DEFINITIONS
+    "TORGET_BOARD_ROUND_1_75C=1;TORGET_DISPLAY_WIDTH=466;TORGET_DISPLAY_HEIGHT=466;TORGET_DISPLAY_ROUND=1"
+    APPEND)
+endif()
 project(torget)
 
 # LVGL:s minnespool till PSRAM (frysfix 2026-08-16, se docs/lessons.md och

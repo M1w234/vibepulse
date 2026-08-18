@@ -45,6 +45,10 @@ static void net_task(void *arg) {
   vTaskDelay(pdMS_TO_TICKS(10000));
 
   for (;;) {
+    /* NET_READY is cleared on every WiFi loss and restored after the new IP
+     * arrives. Re-check it on every cycle so an undock/network switch pauses
+     * requests instead of hammering a dead route. */
+    torget_net_wait();
     tk_tokens t;
     if (torget_http_get(TK_TOKENS_URL, body, sizeof body, &len)
         && tk_tokens_parse(body, len, &t)) {
@@ -99,6 +103,7 @@ static void max_tracker_task(void *arg) {
   vTaskDelay(pdMS_TO_TICKS(15000));
 
   for (;;) {
+    torget_net_wait();
     tk_max_tracker t;
     if (torget_http_get(TK_MAX_TRACKER_URL, body, sizeof body, &len)
         && tk_max_tracker_parse(body, len, &t)) {
